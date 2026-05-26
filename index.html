@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>生物制造公共服务平台设备预约管理系统</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <section id="authView" class="auth-view">
+      <div class="auth-copy">
+        <p class="eyebrow">BioManufacturing Shared Facility</p>
+        <h1>生物制造公共服务平台</h1>
+        <p>所有用户可通过平台网址进入使用。通过公众号进入时跳转第三方浏览器，登录后可检索设备、选择档期并完成预约。</p>
+        <div class="wechat-note">
+          <strong>公众号入口提示</strong>
+          <span>本原型不绑定微信账号，仅模拟从公众号打开网页后的注册登录流程。</span>
+        </div>
+      </div>
+
+      <div class="auth-panel">
+        <div class="auth-tabs">
+          <button id="loginTab" class="active" type="button">登录</button>
+          <button id="registerTab" type="button">外部用户注册</button>
+        </div>
+
+        <form id="loginForm" class="auth-form">
+          <label>
+            账号
+            <input id="loginAccount" type="text" value="ext001" autocomplete="username" />
+          </label>
+          <label>
+            密码
+            <input id="loginPassword" type="password" value="123456" autocomplete="current-password" />
+          </label>
+          <button class="primary-btn" type="submit">进入系统</button>
+          <p class="hint">演示账号：外部 ext001 / 内部 lab001 / 管理员 admin，密码均为 123456。</p>
+        </form>
+
+        <form id="registerForm" class="auth-form hidden">
+          <label>
+            机构名称
+            <input id="registerOrg" type="text" placeholder="请输入单位或企业名称" required />
+          </label>
+          <label>
+            联系人
+            <input id="registerName" type="text" placeholder="请输入联系人姓名" required />
+          </label>
+          <label>
+            手机号
+            <input id="registerPhone" type="tel" placeholder="用于接收预约通知" required />
+          </label>
+          <label>
+            手机验证码
+            <span class="inline-field">
+              <input id="registerCaptcha" type="text" placeholder="请输入验证码" required />
+              <button id="sendCaptchaBtn" class="secondary-btn" type="button">获取验证码</button>
+            </span>
+          </label>
+          <label>
+            设置密码
+            <input id="registerPassword" type="password" value="123456" required />
+          </label>
+          <button class="primary-btn" type="submit">注册并登录</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="appView" class="app-view hidden">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">BioManufacturing Shared Facility</p>
+          <h1>设备预约管理系统</h1>
+        </div>
+        <div class="account-card">
+          <span>当前账号</span>
+          <strong id="accountName">--</strong>
+          <small id="accountMeta">--</small>
+        </div>
+      </header>
+
+      <main class="shell">
+        <nav class="nav-tabs" aria-label="系统导航">
+          <button class="nav-btn active" data-view="booking" type="button">设备预约</button>
+          <button class="nav-btn" data-view="profile" type="button">个人信息</button>
+          <button id="adminNavBtn" class="nav-btn hidden" data-view="admin" type="button">后台管理</button>
+          <button id="logoutBtn" class="nav-btn ghost" type="button">退出登录</button>
+        </nav>
+
+        <section id="bookingPage" class="page active">
+          <section class="panel filters">
+            <div class="panel-heading">
+              <div>
+                <h2>设备检索</h2>
+                <p>按平台类型、设备关键词或工艺关键词筛选设备目录。</p>
+              </div>
+              <button id="resetDemoBtn" class="secondary-btn danger" type="button">恢复演示数据</button>
+            </div>
+            <div class="filter-grid">
+              <label>
+                平台类型
+                <select id="platformFilter">
+                  <option value="all">全部平台</option>
+                  <option value="发酵">发酵</option>
+                  <option value="分离">分离</option>
+                  <option value="检测">检测</option>
+                </select>
+              </label>
+              <label>
+                设备关键词
+                <input id="equipmentKeyword" type="search" placeholder="设备名称、型号、位置" />
+              </label>
+              <label>
+                工艺关键词
+                <input id="processKeyword" type="search" placeholder="菌体、蛋白、代谢物、层析" />
+              </label>
+            </div>
+          </section>
+
+          <section class="booking-layout">
+            <aside class="panel equipment-panel">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>设备目录</h2>
+                  <p id="matchCount">0 台设备</p>
+                </div>
+              </div>
+              <div id="equipmentCards" class="equipment-cards"></div>
+            </aside>
+
+            <section class="panel detail-panel">
+              <div class="detail-top">
+                <div id="equipmentSketch" class="equipment-sketch"></div>
+                <div>
+                  <span id="selectedPlatform" class="tag">平台</span>
+                  <h2 id="selectedName">请选择设备</h2>
+                  <p id="selectedDetail">点击左侧设备查看详情和未来七天预约情况。</p>
+                  <div id="selectedFacts" class="fact-row"></div>
+                  <button id="openDetailBtn" class="secondary-btn detail-open-btn" type="button">查看设备详情</button>
+                </div>
+                <div class="price-box">
+                  <span>设备单价</span>
+                  <strong id="selectedPrice">--</strong>
+                  <small id="nightPrice">--</small>
+                </div>
+              </div>
+
+              <div class="reservation-grid">
+                <section class="schedule-panel">
+                  <div class="section-title">
+                    <h3>未来七天预约情况</h3>
+                    <div class="legend">
+                      <span><i class="free"></i>可选</span>
+                      <span><i class="chosen"></i>已选</span>
+                      <span><i class="busy"></i>已预约</span>
+                      <span><i class="maintenance"></i>维护中</span>
+                    </div>
+                  </div>
+                  <div class="calendar-controls">
+                    <button id="prevWeekBtn" class="secondary-btn" type="button">上一周</button>
+                    <label>
+                      起始日期
+                      <input id="scheduleStartDate" type="date" />
+                    </label>
+                    <button id="nextWeekBtn" class="secondary-btn" type="button">下一周</button>
+                  </div>
+                  <div id="scheduleGrid" class="schedule-grid"></div>
+                </section>
+
+                <aside class="confirm-panel">
+                  <h3>信息确认</h3>
+                  <div id="bookingSummary" class="summary">请选择设备和预约时段。</div>
+                  <label>
+                    使用简介
+                  <textarea id="purposeInput" rows="5" placeholder="填写样品类型、工艺条件、检测目标或注意事项"></textarea>
+                  </label>
+                  <button id="submitInlineMaintenanceBtn" class="secondary-btn hidden" type="button">提交设备维护</button>
+                  <button id="submitBookingBtn" class="primary-btn" type="button" disabled>提交预约信息</button>
+                </aside>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <section id="profilePage" class="page">
+          <section class="panel profile-panel">
+            <div>
+              <h2>账号基本信息</h2>
+              <div id="profileInfo" class="profile-info"></div>
+            </div>
+            <div>
+              <h2>历史设备预约</h2>
+              <section class="invoice-panel">
+                <div>
+                  <h3>发票申请</h3>
+                  <p>可勾选单笔或多笔已完成支付/记账的预约，合并生成一张发票申请。</p>
+                </div>
+                <div class="invoice-form">
+                  <label>
+                    发票抬头
+                    <input id="invoiceTitleInput" type="text" placeholder="单位名称或个人姓名" />
+                  </label>
+                  <label>
+                    税号
+                    <input id="invoiceTaxNoInput" type="text" placeholder="个人可填写无" />
+                  </label>
+                  <label>
+                    接收邮箱
+                    <input id="invoiceEmailInput" type="email" placeholder="用于接收电子发票" />
+                  </label>
+                  <div class="invoice-total">
+                    <span>已选金额</span>
+                    <strong id="invoiceAmount">¥0</strong>
+                  </div>
+                  <button id="issueInvoiceBtn" class="primary-btn" type="button" disabled>申请开具发票</button>
+                </div>
+              </section>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th><input id="selectAllInvoiceBookings" type="checkbox" aria-label="选择全部可开票订单" /></th>
+                      <th>预约编号</th>
+                      <th>设备</th>
+                      <th>日期</th>
+                      <th>时间</th>
+                      <th>费用</th>
+                      <th>状态</th>
+                      <th>发票</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section id="adminPage" class="page">
+          <div class="admin-tabs" role="tablist" aria-label="后台管理功能">
+            <button class="admin-tab active" data-admin-view="bookings" type="button">预约台账</button>
+            <button class="admin-tab" data-admin-view="equipment" type="button">设备管理</button>
+            <button class="admin-tab" data-admin-view="users" type="button">账号信息</button>
+            <button class="admin-tab" data-admin-view="invoices" type="button">发票审核</button>
+            <button class="admin-tab" data-admin-view="rules" type="button">规则优惠</button>
+            <button class="admin-tab" data-admin-view="notice" type="button">弹窗提醒</button>
+          </div>
+
+          <section class="admin-section active" data-admin-section="bookings">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>预约使用信息</h2>
+                  <p>查看全部预约并导出台账。</p>
+                </div>
+                <button id="exportBookingsBtn" class="secondary-btn" type="button">导出预约台账</button>
+              </div>
+              <div class="filter-grid admin-filter-grid">
+                <label>
+                  开始日期
+                  <input id="exportStartDate" type="date" />
+                </label>
+                <label>
+                  结束日期
+                  <input id="exportEndDate" type="date" />
+                </label>
+                <label>
+                  账号/姓名/单位查询
+                  <input id="bookingSearchInput" type="search" placeholder="输入账号、姓名或单位" />
+                </label>
+              </div>
+              <div class="table-wrap tall">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>编号</th>
+                      <th>账号</th>
+                      <th>设备</th>
+                      <th>日期</th>
+                      <th>时间</th>
+                      <th>费用</th>
+                      <th>方式</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminBookingsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="equipment">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>设备批量导入导出</h2>
+                  <p>CSV 字段：名称、平台、地点、负责人、单价、内部价、包夜折扣、关键词、工艺关键词、详情、照片URL。</p>
+                </div>
+                <button id="exportEquipmentBtn" class="secondary-btn" type="button">导出设备 CSV</button>
+              </div>
+              <textarea id="equipmentImportText" rows="7" placeholder="每行一台设备，用逗号分隔字段。"></textarea>
+              <button id="importEquipmentBtn" class="primary-btn" type="button">批量导入设备</button>
+            </div>
+
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>前台展示内容调整</h2>
+                  <p>后台可单独修改设备名称、图片样式、价格、关键词和详情说明。</p>
+                </div>
+                <button id="saveEquipmentBtn" class="primary-btn" type="button">保存修改</button>
+              </div>
+              <div class="edit-grid">
+                <label>
+                  选择设备
+                  <select id="editEquipmentSelect"></select>
+                </label>
+                <label>
+                  设备名称
+                  <input id="editName" type="text" />
+                </label>
+                <label>
+                  平台类型
+                  <select id="editPlatform">
+                    <option value="发酵">发酵</option>
+                    <option value="分离">分离</option>
+                    <option value="检测">检测</option>
+                  </select>
+                </label>
+                <label>
+                  设备地点
+                  <input id="editLocation" type="text" />
+                </label>
+                <label>
+                  设备负责人
+                  <input id="editManager" type="text" />
+                </label>
+                <label>
+                  设备单价
+                  <input id="editPrice" type="number" min="0" />
+                </label>
+                <label>
+                  内部/记账单价
+                  <input id="editInternalRate" type="number" min="0" />
+                </label>
+                <label>
+                  包夜折扣
+                  <input id="editNightDiscount" type="number" min="0.1" max="1" step="0.05" />
+                </label>
+                <label>
+                  设备关键词
+                  <input id="editTags" type="text" />
+                </label>
+                <label>
+                  设备照片 URL
+                  <input id="editPhotoUrl" type="text" placeholder="可填图片链接，留空使用示意图" />
+                </label>
+                <label>
+                  海报标题
+                  <input id="editPosterTitle" type="text" />
+                </label>
+                <label>
+                  海报副标题
+                  <input id="editPosterSubtitle" type="text" />
+                </label>
+                <label>
+                  海报正文图片 URL
+                  <input id="editPosterImageUrl" type="text" placeholder="可填正文展示图片链接" />
+                </label>
+                <label class="span-2">
+                  海报正文
+                  <textarea id="editPosterBody" rows="5"></textarea>
+                </label>
+                <label class="span-2">
+                  设备列表简介
+                  <textarea id="editDescription" rows="4"></textarea>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="users">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>账号基本信息</h2>
+                  <p>查看系统内所有账号的基础资料。</p>
+                </div>
+              </div>
+              <div class="table-wrap tall">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>账号</th>
+                      <th>姓名</th>
+                      <th>单位/课题组</th>
+                      <th>联系方式</th>
+                      <th>角色</th>
+                      <th>总体折扣</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersTable"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>添加账号</h2>
+                  <p>管理员可为内部用户、外部用户或管理员新增账号。</p>
+                </div>
+                <button id="addUserBtn" class="primary-btn" type="button">添加账号</button>
+              </div>
+              <div class="edit-grid">
+                <label>
+                  账号
+                  <input id="newUserAccount" type="text" />
+                </label>
+                <label>
+                  密码
+                  <input id="newUserPassword" type="text" value="123456" />
+                </label>
+                <label>
+                  姓名
+                  <input id="newUserName" type="text" />
+                </label>
+                <label>
+                  单位/课题组
+                  <input id="newUserOrg" type="text" />
+                </label>
+                <label>
+                  联系方式
+                  <input id="newUserPhone" type="text" />
+                </label>
+                <label>
+                  计费类型
+                  <select id="newUserBillingType">
+                    <option value="internal">内部记账</option>
+                    <option value="external">外部付费</option>
+                  </select>
+                </label>
+                <label>
+                  账号角色
+                  <select id="newUserRole">
+                    <option value="user">普通账号</option>
+                    <option value="admin">管理员</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="invoices">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>发票申请审核</h2>
+                  <p>用户提交开票申请后，管理员审核并导出发票台账。</p>
+                </div>
+                <button id="exportInvoicesBtn" class="secondary-btn" type="button">导出发票台账</button>
+              </div>
+              <div class="table-wrap tall">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>发票编号</th>
+                      <th>账号</th>
+                      <th>单位</th>
+                      <th>抬头</th>
+                      <th>税号</th>
+                      <th>邮箱</th>
+                      <th>金额</th>
+                      <th>状态</th>
+                      <th>订单</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminInvoicesTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="rules">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>预约限制设置</h2>
+                  <p>按分组配置外部用户预约要求、包天封顶和包夜折扣。</p>
+                </div>
+                <button id="saveRulesBtn" class="primary-btn" type="button">保存规则</button>
+              </div>
+              <div class="edit-grid">
+                <label>
+                  选择分组
+                  <select id="rulePlatformSelect">
+                    <option value="发酵">发酵</option>
+                    <option value="分离">分离</option>
+                    <option value="检测">检测</option>
+                  </select>
+                </label>
+                <label>
+                  限制适用人群
+                  <select id="ruleAudience">
+                    <option value="external">外部用户</option>
+                    <option value="internal">内部用户</option>
+                    <option value="all">全部用户</option>
+                  </select>
+                </label>
+                <label>
+                  基础时段必须连续
+                  <select id="ruleRequireContinuous">
+                    <option value="true">启用</option>
+                    <option value="false">关闭</option>
+                  </select>
+                </label>
+                <label>
+                  跨天必须连续
+                  <select id="ruleRequireCrossDay">
+                    <option value="true">启用</option>
+                    <option value="false">关闭</option>
+                  </select>
+                </label>
+                <label>
+                  基础时段最小连续时长(小时)
+                  <input id="ruleMinNormalHours" type="number" min="0" step="1" />
+                </label>
+                <label>
+                  包天封顶
+                  <select id="ruleDailyCapEnabled">
+                    <option value="true">启用</option>
+                    <option value="false">关闭</option>
+                  </select>
+                </label>
+                <label>
+                  触发机时(小时)
+                  <input id="ruleDailyCapThreshold" type="number" min="0" step="1" />
+                </label>
+                <label>
+                  封顶计费机时(小时)
+                  <input id="ruleDailyCapBillableHours" type="number" min="0" step="1" />
+                </label>
+                <div class="info-line span-2">
+                  <span>说明</span>
+                  <strong>同一单位同一天同一设备超过触发机时后，按封顶计费机时计算；包夜折扣在设备管理中单独维护。</strong>
+                </div>
+                <div id="ruleOverview" class="rule-overview span-2"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" data-admin-section="notice">
+            <div class="panel admin-card">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>用户弹窗提醒</h2>
+                  <p>设置所有用户登录后看到的弹出提醒内容。</p>
+                </div>
+                <button id="saveNoticeBtn" class="primary-btn" type="button">保存提醒</button>
+              </div>
+              <div class="edit-grid">
+                <label>
+                  启用提醒
+                  <select id="noticeEnabled">
+                    <option value="true">启用</option>
+                    <option value="false">关闭</option>
+                  </select>
+                </label>
+                <label>
+                  弹窗标题
+                  <input id="noticeTitle" type="text" />
+                </label>
+                <label class="span-2">
+                  提醒内容
+                  <textarea id="noticeContent" rows="5"></textarea>
+                </label>
+              </div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </section>
+
+    <section id="noticeModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card">
+        <div class="panel-heading compact">
+          <div>
+            <h2 id="noticeModalTitle">系统提醒</h2>
+            <p id="noticeModalContent"></p>
+          </div>
+          <button id="closeNoticeBtn" class="icon-button" type="button">×</button>
+        </div>
+        <button id="confirmNoticeBtn" class="primary-btn" type="button">我知道了</button>
+      </div>
+    </section>
+
+    <section id="detailModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card detail-modal-card">
+        <div class="poster-hero">
+          <div class="poster-copy">
+            <span id="detailModalPlatform" class="tag">平台</span>
+            <h2 id="detailModalName">设备详情</h2>
+            <strong id="detailModalSubtitle"></strong>
+            <p id="detailModalMeta"></p>
+          </div>
+          <button id="closeDetailBtn" class="icon-button" type="button">×</button>
+        </div>
+        <div class="poster-body">
+          <div id="detailModalPhoto" class="equipment-sketch"></div>
+          <div class="poster-content">
+            <img id="detailModalPosterImage" alt="设备详情图片" class="hidden" />
+            <p id="detailModalDescription"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="paymentModal" class="modal hidden" aria-modal="true" role="dialog">
+      <div class="modal-card">
+        <div class="panel-heading compact">
+          <div>
+            <h2>确认收费</h2>
+            <p>选择支付宝或微信支付。支付成功后预约立即生效。</p>
+          </div>
+          <button id="closePaymentBtn" class="icon-button" type="button">×</button>
+        </div>
+        <div id="paymentSummary" class="summary"></div>
+        <div class="pay-options">
+          <button class="pay-btn alipay" data-pay-method="支付宝" type="button">支付宝支付</button>
+          <button class="pay-btn wechat" data-pay-method="微信支付" type="button">微信支付</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
